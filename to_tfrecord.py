@@ -3,6 +3,7 @@ from os import listdir
 import json
 import cv2
 import tensorflow as tf 
+import sys 
 
 class_map= {'bags':0,'belts':1,'dresses':2,'eyewear':3,'footwear':4,
     'hats':5,'leggings':6,'outerwear':7,'pants':8,'skirts':9,'tops':10}
