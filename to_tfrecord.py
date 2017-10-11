@@ -48,8 +48,8 @@ for filename in meta_files:
         for dat in test_data:
             test_images.append(dat['photo'])
             test_images.append(dat['product'])
-            test_labels.append(class_map[filename[12:-5]])
-            test_labels.append(class_map[filename[12:-5]])
+            test_labels.append(class_map[filename[11:-5]])
+            test_labels.append(class_map[filename[11:-5]])
 
 
 def load_image(addr):
