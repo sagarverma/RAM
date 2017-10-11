@@ -12,4 +12,8 @@ meta_files = listdir(meta_path)
 
 for filename in meta_files:
     if 'train' in filename:
-        
+        fin = open(meta_path + filename, 'r')
+        train_data = json.loads(fin.read())
+        fin.close()
+
+        print train_data,train_data[0]
