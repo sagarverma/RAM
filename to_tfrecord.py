@@ -16,6 +16,6 @@ for filename in meta_files:
         train_data = json.loads(fin.read())
         fin.close()
 
-        print train_data,train_data[0]
+        print len(train_data),train_data[0]
 
         break
