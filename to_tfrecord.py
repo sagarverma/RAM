@@ -17,3 +17,5 @@ for filename in meta_files:
         fin.close()
 
         print train_data,train_data[0]
+
+        break
