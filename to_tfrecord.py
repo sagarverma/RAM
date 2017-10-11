@@ -55,7 +55,7 @@ for filename in meta_files:
                 test_images.append(dat['photo'])
                 test_labels.append(class_map[filename[11:-5]])
 
-            if path.exists(images_path + str(dat['photo']) + '.jpg'):
+            if path.exists(images_path + str(dat['product']) + '.jpg'):
                 test_images.append(dat['product'])
                 test_labels.append(class_map[filename[11:-5]])
 
