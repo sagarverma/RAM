@@ -1,5 +1,5 @@
 from random import shuffle
-from os import listdir
+from os import listdir, path
 import json
 import cv2
 import tensorflow as tf 
@@ -28,10 +28,13 @@ for filename in meta_files:
         fin.close()
 
         for dat in train_data:
-            train_images.append(dat['photo'])
-            train_images.append(dat['product'])
-            train_labels.append(class_map[filename[12:-5]])
-            train_labels.append(class_map[filename[12:-5]])
+            if path.exists(images_path + str(dat['photo']) + '.jpg'):
+                train_images.append(dat['photo'])
+                train_labels.append(class_map[filename[12:-5]])
+
+            if path.exists(images_path + str(dat['product']) + '.jpg'):
+                train_images.append(dat['product'])
+                train_labels.append(class_map[filename[12:-5]])
 
 if shuffle_data:
     c = list(zip(train_images, train_labels))
@@ -48,17 +51,19 @@ for filename in meta_files:
         fin.close()
 
         for dat in test_data:
-            test_images.append(dat['photo'])
-            test_images.append(dat['product'])
-            test_labels.append(class_map[filename[11:-5]])
-            test_labels.append(class_map[filename[11:-5]])
+            if path.exists(images_path + str(dat['photo']) + '.jpg'):
+                test_images.append(dat['photo'])
+                test_labels.append(class_map[filename[11:-5]])
+
+            if path.exists(images_path + str(dat['photo']) + '.jpg'):
+                test_images.append(dat['product'])
+                test_labels.append(class_map[filename[11:-5]])
 
 
 def load_image(addr):
     # read an image and resize to (224, 224)
     # cv2 load images as BGR, convert it to RGB
     img = cv2.imread(addr)
-    print img.shape
     #img = cv2.resize(img, (224, 224), interpolation=cv2.INTER_CUBIC)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = img.astype(np.float32)
