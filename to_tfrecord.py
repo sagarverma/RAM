@@ -72,7 +72,7 @@ train_filename = dataset_path + 'street2shop_train.tfrecords'
 writer = tf.python_io.TFRecordWriter(train_filename)
 
 for i in range(len(train_images)):
-    if not i % 1000;
+    if not i % 1000:
         print 'Train data: {}/{}'.format(i, len(train_images))
         sys.stdout.flush()
 
