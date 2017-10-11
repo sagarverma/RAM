@@ -77,7 +77,7 @@ for i in range(len(train_images)):
         print 'Train data: {}/{}'.format(i, len(train_images))
         sys.stdout.flush()
 
-    img = load_image(images_path + train_images[i] + '.jpg')
+    img = load_image(images_path + str(train_images[i]) + '.jpg')
     label = train_labels[i]
 
     # Create a feature
@@ -102,7 +102,7 @@ for i in range(len(test_images)):
         print 'Test data: {}/{}'.format(i, len(test_images))
         sys.stdout.flush()
     # Load the image
-    img = load_image(test_images[i])
+    img = load_image(images_path + str(test_images[i]) + '.jpg')
     label = test_labels[i]
     # Create a feature
     feature = {'test/label': _int64_feature(label),
