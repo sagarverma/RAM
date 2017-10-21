@@ -12,14 +12,10 @@ from glimpse import GlimpseNet, LocNet
 from utils import weight_variable, bias_variable, loglikelihood
 from config import Config
 
-from tensorflow.examples.tutorials.mnist import input_data
-
 logging.getLogger().setLevel(logging.INFO)
 
 rnn_cell = tf.nn.rnn_cell
 seq2seq = tf.contrib.legacy_seq2seq
-
-mnist = input_data.read_data_sets('MNIST_data', one_hot=False)
 
 config = Config()
 n_steps = config.step
@@ -37,7 +33,7 @@ def get_next_input(output, i):
 
 # placeholders
 images_ph = tf.placeholder(tf.float32,
-                           [None, config.original_size * config.original_size *
+                           [None, config.original_size , config.original_size ,
                             config.num_channels])
 labels_ph = tf.placeholder(tf.int64, [None])
 
@@ -103,7 +99,7 @@ grads, _ = tf.clip_by_global_norm(grads, config.max_grad_norm)
 # learning rate
 global_step = tf.get_variable(
     'global_step', [], initializer=tf.constant_initializer(0), trainable=False)
-training_steps_per_epoch = mnist.train.num_examples // config.batch_size
+training_steps_per_epoch = config.train_images_size // config.batch_size
 starter_learning_rate = config.lr_start
 # decay per training epoch
 learning_rate = tf.train.exponential_decay(
@@ -117,20 +113,46 @@ opt = tf.train.AdamOptimizer(learning_rate)
 train_op = opt.apply_gradients(zip(grads, var_list), global_step=global_step)
 
 with tf.Session() as sess:
-  sess.run(tf.initialize_all_variables())
+  feature = {'train/image': tf.FixedLenFeature([], tf.string),
+               'train/label': tf.FixedLenFeature([], tf.int64)}
+  # Create a list of filenames and pass it to a queue
+  filename_queue = tf.train.string_input_producer([config.train_data_path])
+  # Define a reader and read the next record
+  reader = tf.TFRecordReader()
+  _, serialized_example = reader.read(filename_queue)
+  # Decode the record read by the reader
+  features = tf.parse_single_example(serialized_example, features=feature)
+  # Convert the image data from string back to the numbers
+  image = tf.decode_raw(features['train/image'], tf.float32)
+
+  # Cast label data into int32
+  label = tf.cast(features['train/label'], tf.int32)
+  
+  # Reshape image data into the original shape
+  image = tf.reshape(image, [256, 256, 3])
+
+  # Any preprocessing here ...
+
+  # Creates batches by randomly shuffling tensors
+  images, labels = tf.train.shuffle_batch([image, label], batch_size=config.batch_size, capacity=64, num_threads=2, min_after_dequeue=0)
+
+  init_op = tf.group(tf.global_variables_initializer(),
+                   tf.local_variables_initializer())
+  
+  sess.run(init_op)
+
+  coord = tf.train.Coordinator()
+  threads = tf.train.start_queue_runners(coord=coord)
   for i in xrange(n_steps):
-    images, labels = mnist.train.next_batch(config.batch_size)
-    # duplicate M times, see Eqn (2)
-    images = np.tile(images, [config.M, 1])
-    labels = np.tile(labels, [config.M])
+    imgs, lbls = sess.run([images, labels])
     loc_net.samping = True
     adv_val, baselines_mse_val, xent_val, logllratio_val, \
         reward_val, loss_val, lr_val, _ = sess.run(
             [advs, baselines_mse, xent, logllratio,
              reward, loss, learning_rate, train_op],
             feed_dict={
-                images_ph: images,
-                labels_ph: labels
+                images_ph: imgs,
+                labels_ph: lbls
             })
     if i and i % 100 == 0:
       logging.info('step {}: lr = {:3.6f}'.format(i, lr_val))
@@ -140,32 +162,50 @@ with tf.Session() as sess:
       logging.info('llratio = {:3.4f}\tbaselines_mse = {:3.4f}'.format(
           logllratio_val, baselines_mse_val))
 
+    
     if i and i % training_steps_per_epoch == 0:
       # Evaluation
-      for dataset in [mnist.validation, mnist.test]:
-        steps_per_epoch = dataset.num_examples // config.eval_batch_size
-        correct_cnt = 0
-        num_samples = steps_per_epoch * config.batch_size
-        loc_net.sampling = True
-        for test_step in xrange(steps_per_epoch):
-          images, labels = dataset.next_batch(config.batch_size)
-          labels_bak = labels
-          # Duplicate M times
-          images = np.tile(images, [config.M, 1])
-          labels = np.tile(labels, [config.M])
-          softmax_val = sess.run(softmax,
-                                 feed_dict={
-                                     images_ph: images,
-                                     labels_ph: labels
-                                 })
-          softmax_val = np.reshape(softmax_val,
-                                   [config.M, -1, config.num_classes])
-          softmax_val = np.mean(softmax_val, 0)
-          pred_labels_val = np.argmax(softmax_val, 1)
-          pred_labels_val = pred_labels_val.flatten()
-          correct_cnt += np.sum(pred_labels_val == labels_bak)
-        acc = correct_cnt / num_samples
-        if dataset == mnist.validation:
-          logging.info('valid accuracy = {}'.format(acc))
-        else:
-          logging.info('test accuracy = {}'.format(acc))
+      feature = {'test/image': tf.FixedLenFeature([], tf.string),
+               'test/label': tf.FixedLenFeature([], tf.int64)}
+      # Create a list of filenames and pass it to a queue
+      filename_queue = tf.test.string_input_producer([config.test_data_path], num_epochs=1)
+      # Define a reader and read the next record
+      reader = tf.TFRecordReader()
+      _, serialized_example = reader.read(filename_queue)
+      # Decode the record read by the reader
+      features = tf.parse_single_example(serialized_example, features=feature)
+      # Convert the image data from string back to the numbers
+      image = tf.decode_raw(features['test/image'], tf.float32)
+
+      # Cast label data into int32
+      label = tf.cast(features['test/label'], tf.int32)
+      # Reshape image data into the original shape
+      image = tf.reshape(image, [256, 256, 3])
+
+      # Any preprocessing here ...
+
+      # Creates batches by randomly shuffling tensors
+      images, labels = tf.train.shuffle_batch([image, label], batch_size=config.batch_size, capacity=30, num_threads=1, min_after_dequeue=10)
+
+      steps_per_epoch = config.test_images_size // config.eval_batch_size
+      correct_cnt = 0
+      num_samples = steps_per_epoch * config.batch_size
+      loc_net.sampling = True
+      for test_step in xrange(steps_per_epoch):
+        imgs, labls = sess.run([images, labels])
+        labels_bak = lbls
+        # Duplicate M times
+        softmax_val = sess.run(softmax,
+                               feed_dict={
+                                   images_ph: imgs,
+                                   labels_ph: lbls
+                               })
+        softmax_val = np.reshape(softmax_val,
+                                 [config.M, -1, config.num_classes])
+        softmax_val = np.mean(softmax_val, 0)
+        pred_labels_val = np.argmax(softmax_val, 1)
+        pred_labels_val = pred_labels_val.flatten()
+        correct_cnt += np.sum(pred_labels_val == labels_bak)
+      acc = correct_cnt / num_samples
+      logging.info('test accuracy = {}'.format(acc))
+  

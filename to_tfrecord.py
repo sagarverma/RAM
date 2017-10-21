@@ -59,7 +59,9 @@ for filename in meta_files:
                 test_images.append(dat['product'])
                 test_labels.append(class_map[filename[11:-5]])
 
+print len(train_images), len(test_images)
 
+'''
 def load_image(addr):
     # read an image and resize to (224, 224)
     # cv2 load images as BGR, convert it to RGB
@@ -120,4 +122,4 @@ for i in range(len(test_images)):
     writer.write(example.SerializeToString())
 writer.close()
 sys.stdout.flush()
-
+'''

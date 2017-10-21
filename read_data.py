@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
-data_path = 'train.tfrecords'  # address to save the hdf5 file
+data_path = '../../datasets/street2shop/street2shop_train.tfrecords'  # address to save the hdf5 file
 
 inverse_class_map= {0:'bags',1:'belts',2:'dresses',3:'eyewear',4:'footwear',
     5:'hats',6:'leggings',7:'outerwear',8:'pants',9:'skirts',10:'tops'}
