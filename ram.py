@@ -76,10 +76,12 @@ with tf.variable_scope('cls'):
 logits = tf.nn.xw_plus_b(output, w_logit, b_logit)
 softmax = tf.nn.softmax(logits)
 
+
 # cross-entropy.
 xent = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels_ph)
 xent = tf.reduce_mean(xent)
 pred_labels = tf.argmax(logits, 1)
+
 # 0/1 reward.
 reward = tf.cast(tf.equal(pred_labels, labels_ph), tf.float32)
 rewards = tf.expand_dims(reward, 1)  # [batch_sz, 1]
@@ -112,7 +114,10 @@ learning_rate = tf.maximum(learning_rate, config.lr_min)
 opt = tf.train.AdamOptimizer(learning_rate)
 train_op = opt.apply_gradients(zip(grads, var_list), global_step=global_step)
 
-with tf.Session() as sess:
+config_proto = tf.ConfigProto()
+config_proto.gpu_options.per_process_gpu_memory_fraction = 0.3
+
+with tf.Session(config=config_proto) as sess:
   feature = {'train/image': tf.FixedLenFeature([], tf.string),
                'train/label': tf.FixedLenFeature([], tf.int64)}
   # Create a list of filenames and pass it to a queue
@@ -157,18 +162,18 @@ with tf.Session() as sess:
     if i and i % 100 == 0:
       logging.info('step {}: lr = {:3.6f}'.format(i, lr_val))
       logging.info(
-          'step {}: reward = {:3.4f}\tloss = {:3.4f}\txent = {:3.4f}'.format(
+          '\tstep {}: reward = {:3.4f}\tloss = {:3.4f}\txent = {:3.4f}'.format(
               i, reward_val, loss_val, xent_val))
-      logging.info('llratio = {:3.4f}\tbaselines_mse = {:3.4f}'.format(
+      logging.info('\tllratio = {:3.4f}\tbaselines_mse = {:3.4f}'.format(
           logllratio_val, baselines_mse_val))
 
-    
+    '''
     if i and i % training_steps_per_epoch == 0:
       # Evaluation
       feature = {'test/image': tf.FixedLenFeature([], tf.string),
                'test/label': tf.FixedLenFeature([], tf.int64)}
       # Create a list of filenames and pass it to a queue
-      filename_queue = tf.test.string_input_producer([config.test_data_path], num_epochs=1)
+      filename_queue = tf.train.string_input_producer([config.test_data_path], num_epochs=1)
       # Define a reader and read the next record
       reader = tf.TFRecordReader()
       _, serialized_example = reader.read(filename_queue)
@@ -192,6 +197,7 @@ with tf.Session() as sess:
       num_samples = steps_per_epoch * config.batch_size
       loc_net.sampling = True
       for test_step in xrange(steps_per_epoch):
+        logging.info('test_step = {}'.format(test_step))
         imgs, labls = sess.run([images, labels])
         labels_bak = lbls
         # Duplicate M times
@@ -208,4 +214,4 @@ with tf.Session() as sess:
         correct_cnt += np.sum(pred_labels_val == labels_bak)
       acc = correct_cnt / num_samples
       logging.info('test accuracy = {}'.format(acc))
-  
+    '''
